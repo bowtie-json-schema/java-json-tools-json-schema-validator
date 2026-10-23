@@ -115,6 +115,18 @@ public class BowtieJsonSchemaValidator {
       throw new IllegalArgumentException("Not started!");
     }
     RunRequest runRequest = objectMapper.treeToValue(node, RunRequest.class);
+    if (runRequest.output() != null && !runRequest.output().equals("flag")) {
+      List<Record> results =
+          runRequest.testCase()
+              .tests()
+              .stream()
+              .map(test -> (Record) new TestSkipped(
+                  true, "unsupported output format " + runRequest.output()))
+              .toList();
+      output.println(objectMapper.writeValueAsString(
+          new RunResponse(runRequest.seq(), results)));
+      return;
+    }
     try {
       final LoadingConfigurationBuilder builder =
           LoadingConfiguration.newBuilder();
@@ -176,7 +188,8 @@ record DialectRequest(String dialect) {}
 
 record DialectResponse(boolean ok) {}
 
-record RunRequest(JsonNode seq, @JsonProperty("case") TestCase testCase) {}
+record RunRequest(JsonNode seq, @JsonProperty("case") TestCase testCase,
+                  String output) {}
 
 record RunResponse(JsonNode seq, List<Record> results) {}
 
@@ -204,4 +217,5 @@ record
 }
 
 record TestResult(boolean valid) {}
+record TestSkipped(boolean skipped, String message) {}
 record TestErrored(boolean errored, ErrorContext context) {}
